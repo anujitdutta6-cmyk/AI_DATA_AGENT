@@ -1,65 +1,51 @@
 import os
-import requests
+from pathlib import Path
+
 import pandas as pd
+import requests
+
 
 class ETLTools:
+    """Small ETL helpers for API extraction and Pandas transformations."""
 
-    def __init__(self):
-        pass
+    def extract_load(self, url: str, output_folder: str, format: str):
+        """Extract JSON from an API and persist it as CSV, JSON, or Parquet."""
+        if format not in {"csv", "json", "parquet"}:
+            return f"Unsupported format: {format}"
 
-    def extract_load(self,url:str, output_folder:str, format:str):
-        """
-        This tool extracts the data from the API (url) and loads it into the
-        the desired location (output_folder).
-
-        Args:
-            url (str): The API endpoint from which to extract data.
-            output_folder (str): The folder where the extracted data will be saved.
-        
-        Returns:
-            str: A message indicating the success or failure of the operation.
-
-        """
-
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        output_folder = os.path.join(project_root, output_folder)      
+        project_root = Path(__file__).resolve().parent.parent
+        requested_output = Path(output_folder)
+        output_path = requested_output if requested_output.is_absolute() else project_root / requested_output
 
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=(5, 30))
             response.raise_for_status()
-            data  = response.json()
+            data = response.json()
 
-            filename = os.path.join(output_folder, f"extracted_data.{format}")
-            os.makedirs(output_folder, exist_ok=True)
+            # APIs often return a list directly, or wrap records in "results".
+            records = data.get("results", data) if isinstance(data, dict) else data
+            if isinstance(records, dict):
+                records = [records]
+            if not isinstance(records, list):
+                return "Failed to extract data: API response must be a JSON object or list."
 
-            df = pd.json_normalize(data['results'])
+            df = pd.json_normalize(records)
+            output_path.mkdir(parents=True, exist_ok=True)
+            filename = output_path / f"extracted_data.{format}"
+
             if format == "csv":
                 df.to_csv(filename, index=False)
             elif format == "json":
                 df.to_json(filename, orient="records", lines=True)
-            elif format == "parquet":
-                df.to_parquet(filename, index=False)
             else:
-                return f"Unsupported format: {format}"
+                df.to_parquet(filename, index=False)
 
             return f"Data successfully extracted and saved to {filename}"
-        except requests.exceptions.RequestException as e:
-            return f"Failed to extract data: {e}"
+        except (requests.exceptions.RequestException, ValueError, OSError) as exc:
+            return f"Failed to extract data: {exc}"
 
-
-    def transform_load_context(self, file_path:str):
-        """
-        This tool transforms the data from the specified file and loads it into the
-        desired location (output_folder).
-
-        Args:
-            file_path (str): The path to the file containing the data to be transformed.
-            output_folder (str): The folder where the transformed data will be saved.
-            output_format (str): The format in which to save the transformed data (csv, json, parquet).
-        Returns:
-            str: A message indicating the success or failure of the operation.
-        """
-
+    def transform_load_context(self, file_path: str):
+        """Return a small preview of a supported local dataset."""
         file_extension = os.path.splitext(file_path)[1].lower()
         if file_extension == ".csv":
             df = pd.read_csv(file_path)
@@ -70,36 +56,26 @@ class ETLTools:
         else:
             return f"Unsupported file format: {file_extension}"
 
-        top_3_rows = str(df.head(3))
+        return str(df.head(3))
 
-        return top_3_rows
+    def execute_code(self, code: str, context: dict | None = None):
+        """Execute generated transformation code with an explicit variable namespace.
 
-
-    def execute_code(self,code:str):
+        WARNING: this is not a security sandbox. Only run trusted code until this
+        operation is moved to an isolated, resource-limited execution environment.
         """
-        This tool executes the provided code and returns the output.
-
-        Args:
-            code (str): The code to be executed.
-        Returns:
-            str: The output of the executed code or an error message if execution fails.
-        """
+        namespace = {"pd": pd, "os": os}
+        if context:
+            namespace.update(context)
 
         try:
-            exec(code)
+            exec(code, namespace, namespace)
             return "Code executed successfully."
-        except Exception as e:
-            return f"Failed to execute code: {e}"
+        except Exception as exc:
+            return f"Failed to execute code: {exc}"
 
-
-# if __name__ == "__main__":
-#     obj = ETLTools()
-#     print(obj.extract_load("https://pokeapi.co/api/v2/pokemon/","data/extract", "csv"))
-#     # print(obj.transform_load_context(path))
-          
 
 if __name__ == "__main__":
     obj = ETLTools()
-    path ="c:\\AI_DATA_AGENT\\data\\extract\\extracted_data.csv"
-    print(obj.transform_load_context(path))
-          
+    sample_path = Path(__file__).resolve().parent.parent / "data" / "extract" / "extracted_data.csv"
+    print(obj.transform_load_context(str(sample_path)))
