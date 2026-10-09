@@ -1,0 +1,30 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# Local data and generated artifacts
+data/extract/
+data/transform/
+*.log
+data_agent_graph.png
+sql_analyst_graph.png
+etl_analyst_graph.png
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
