@@ -5,7 +5,6 @@ A Python-based, graph-orchestrated data assistant that routes natural-language r
 > **Project status:** Learning/portfolio prototype. The current implementation demonstrates routing, specialist graphs, schema-aware SQL generation, an LLM-based SQL safety decision, and API/file transformations. It is **not production-hardened**: see [Security and production-readiness](#security-and-production-readiness) before running it against sensitive data.
 
 - **Repository:** https://github.com/anujitdutta6-cmyk/AI_DATA_AGENT
-- **Reference tutorial:** https://www.youtube.com/watch?v=7yOmi4IX-Rs
 - **Runtime:** Python 3.12+
 - **Primary database:** PostgreSQL
 - **LLM configuration:** Gemini-compatible endpoint through LangChain's ChatOpenAI integration
