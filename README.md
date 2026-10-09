@@ -565,7 +565,6 @@ The items below are based on reviewing the current repository contents; they are
 
 ---
 
-## Interview preparation
 
 ### 30-second project explanation
 
@@ -598,19 +597,11 @@ The items below are based on reviewing the current repository contents; they are
 | Pandas processing | Simple for moderate datasets | Memory-bound; use Spark or distributed processing for larger data |
 | Graph-based workflow | Visible branching and extensibility | More components to test and observe |
 
-### Be accurate in interviews
-
-Describe the project as a **working prototype with explicit hardening opportunities**, not as a fully sandboxed or production-secure agent. Clearly separate implemented functionality from the roadmap above.
 
 ---
 
 ## References
 
-- [Project repository](https://github.com/anujitdutta6-cmyk/AI_DATA_AGENT)
-- [YouTube tutorial referenced for this project](https://www.youtube.com/watch?v=7yOmi4IX-Rs)
 - [LangGraph documentation](https://docs.langchain.com/oss/python/langgraph/overview)
 - [LangChain SQL agent guide](https://docs.langchain.com/oss/python/langchain/sql-agent)
 
-## License
-
-No license file was present in the repository at the time this README was prepared. Add a license before presenting the project as open source for reuse.
