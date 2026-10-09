@@ -63,12 +63,12 @@ def pick_llm(level: str):
 # TEST
 # ============================================================
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    llm_obj = pick_llm("high")
+#     llm_obj = pick_llm("high")
 
-    response = llm_obj.invoke(
-        "What is the capital of France?"
-    )
+#     response = llm_obj.invoke(
+#         "What is the capital of France?"
+#     )
 
-    print(response.content)
+#     print(response.content)
