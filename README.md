@@ -72,6 +72,31 @@ The extraction utility currently expects the API response to contain a top-level
 
 ### High-level system architecture
 
+```mermaid
+flowchart TD
+    U[User request] --> R[Data Agent Router]
+    R --> D{SQL or ETL?}
+    D -->|SQL| S[SQL Analyst subgraph]
+    D -->|ETL| E[ETL Analyst subgraph]
+    S --> S1[Curate question]
+    S1 --> S2[Retrieve PostgreSQL schema]
+    S2 --> S3[Generate SQL]
+    S3 --> S4[LLM safety judge]
+    S4 -->|Approved| S5[Execute read query]
+    S4 -->|Rejected| S6[Return blocked response]
+    S5 --> S7[Summarize results]
+    E --> E1[Select ETL tool]
+    E1 --> E2{Extract or transform?}
+    E2 -->|Extract| E3[HTTP API and JSON normalization]
+    E2 -->|Transform| E4[Read file and generate Pandas code]
+    E3 --> E5[Write CSV / JSON / Parquet]
+    E4 --> E6[Execute code and write output]
+    S7 --> O[Return response]
+    S6 --> O
+    E5 --> O
+    E6 --> O
+```
+
 The system has four logical layers:
 
 1. **Request layer:** receives the natural-language request.
@@ -114,11 +139,14 @@ These images are maintained in the repository and can be opened directly:
 
 ### Main router graph
 
-    START -> router_node
-                 |
-                 +-- route = sql --> sql_node --> END
-                 |
-                 +-- route = etl --> etl_node --> END
+```mermaid
+flowchart TD
+    START([START]) --> ROUTER[router_node]
+    ROUTER -->|route = sql| SQL[sql_node]
+    ROUTER -->|route = etl| ETL[etl_node]
+    SQL --> END([END])
+    ETL --> END
+```
 
 The router's structured output is normalized and checked against the supported route values. A conditional edge dispatches the request to one specialist, and the specialist result is returned as a message.
 
@@ -136,23 +164,19 @@ LangGraph represents a workflow with **state, nodes, and edges**:
 
 ### 1. SQL Analyst graph
 
-    START
-      |
-      v
-    Curate user question
-      |
-      v
-    Fetch schema and build prompt
-      |
-      v
-    Generate SQL
-      |
-      v
-    LLM safety judge
-      |
-      +-- Safe? YES --> Execute SQL --> Generate natural-language answer --> END
-      |
-      +-- Safe? NO  --> Build blocked response ---------------------------> END
+```mermaid
+flowchart TD
+    A([START]) --> B[Curate user question]
+    B --> C[Fetch schema and build prompt]
+    C --> D[Generate SQL]
+    D --> E[LLM safety judge]
+    E --> F{Safe?}
+    F -->|Yes| G[Execute SQL]
+    F -->|No| H[Build blocked response]
+    G --> I[Generate natural-language answer]
+    I --> J([END])
+    H --> J
+```
 
 The intended safety branch is useful, but the current judge is an LLM decisionâ€”not a deterministic SQL parser or a database-enforced security boundary. See the security section for what should change before production use.
 
@@ -160,21 +184,18 @@ The intended safety branch is useful, but the current judge is an LLM decisionâ€
 
 The ETL graph uses an LLM to interpret the task and select a tool. The tools currently cover extraction and transformation.
 
-    START --> LLM interprets request --> Tool call?
-                                      |
-                    +-----------------+-----------------+
-                    |                                   |
-                    v                                   v
-             Extract API data                    Transform a file
-                    |                                   |
-                    +-----------------+-----------------+
-                                      |
-                                      v
-                             Return tool result
-                                      |
-                               Continue or finish?
-                                      |
-                                     END
+```mermaid
+flowchart TD
+    A([START]) --> B[LLM interprets request]
+    B --> C{Tool call?}
+    C -->|Extract API| D[extract_load_tool]
+    C -->|Transform file| E[transform_load_tool]
+    D --> F[Return tool result]
+    E --> F
+    F --> G{Continue or finish?}
+    G -->|Continue| B
+    G -->|Finish| H([END])
+```
 
 The exact execution path depends on the model's tool-call output. Tool errors are generally returned as text, so callers should verify the final output file and status rather than assuming a tool call succeeded.
 
@@ -529,6 +550,8 @@ The items below are based on reviewing the current repository contents; they are
 - [ ] Replace LLM-only SQL safety decisions with deterministic validation and read-only DB enforcement.
 - [ ] Remove unrestricted exec(); use a transformation DSL or isolated worker.
 - [ ] Add API timeouts, pagination, retry/backoff, response-schema validation, and SSRF protection.
+- [ ] Fix ETL execution scope: generated transformation code expects input_file_path, output_folder, and output_format, but the current execute_code() call uses exec(code) without explicitly passing those variables into the execution namespace.
+- [ ] Declare direct dependencies used by the code, including requests and a Parquet engine such as pyarrow, rather than relying on transitive packages or optional local installs.
 - [ ] Add file-size limits, path allow-lists, and atomic output writes.
 - [ ] Narrow schema retrieval to relevant tables and mask sample values.
 - [ ] Add bounded SQL retry/repair with explicit stop conditions.
